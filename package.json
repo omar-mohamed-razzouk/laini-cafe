@@ -1,5 +1,10 @@
 {
   "name": "workspace",
+  "workspaces": [
+    "artifacts/*",
+    "lib/*",
+    "scripts"
+  ],
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
