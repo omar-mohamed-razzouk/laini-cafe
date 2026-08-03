@@ -1,0 +1,36 @@
+{
+  "name": "brewdesk-desktop",
+  "version": "1.0.0",
+  "description": "BrewDesk desktop wrapper (Electron)",
+  "main": "main.js",
+  "author": "BrewDesk",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.brewdesk.desktop",
+    "productName": "BrewDesk",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "offline.html",
+      "build/icon.ico"
+    ],
+    "win": {
+      "target": [
+        "zip"
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    }
+  }
+}

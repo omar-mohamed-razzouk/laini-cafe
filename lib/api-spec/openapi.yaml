@@ -1,0 +1,2847 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: BrewDesk Café Management System API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+  - name: auth
+  - name: staff
+  - name: tables
+  - name: rooms
+  - name: menu
+  - name: sessions
+  - name: bookings
+  - name: orders
+  - name: invoices
+  - name: expenses
+  - name: inventory
+  - name: reports
+  - name: dashboard
+  - name: customers
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /version:
+    get:
+      operationId: getVersion
+      tags: [health]
+      summary: Get the currently deployed application version
+      responses:
+        "200":
+          description: Current version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersionInfo"
+
+  # ── Auth ──────────────────────────────────────────────────────────────
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with username and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+        "401":
+          description: Invalid credentials
+        "403":
+          description: Default password must be changed (code DEFAULT_PASSWORD) or account inactive
+
+  /auth/force-change-password:
+    post:
+      operationId: forceChangePassword
+      tags: [auth]
+      summary: Change a default password before first login (no token required)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForceChangePasswordInput"
+      responses:
+        "200":
+          description: Password changed and logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+        "400":
+          description: Invalid new password
+        "401":
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current session
+      responses:
+        "200":
+          description: Logged out
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current logged-in staff member
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Staff"
+
+  /auth/change-password:
+    post:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change the current user's own password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResult"
+        "400":
+          description: Invalid input
+        "401":
+          description: Current password incorrect
+
+  # ── Admin ─────────────────────────────────────────────────────────────
+  /admin/reset-data:
+    post:
+      operationId: resetData
+      tags: [admin]
+      summary: Reset selected operational data to zero (manager/admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetDataInput"
+      responses:
+        "200":
+          description: Data reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResetDataResult"
+        "400":
+          description: Invalid confirmation
+        "403":
+          description: Not authorized
+
+  # ── Staff ─────────────────────────────────────────────────────────────
+  /staff:
+    get:
+      operationId: listStaff
+      tags: [staff]
+      summary: List all staff members
+      responses:
+        "200":
+          description: List of staff
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Staff"
+    post:
+      operationId: createStaff
+      tags: [staff]
+      summary: Create a new staff member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Staff"
+
+  /staff/{id}:
+    get:
+      operationId: getStaff
+      tags: [staff]
+      summary: Get a staff member by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Staff member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Staff"
+    patch:
+      operationId: updateStaff
+      tags: [staff]
+      summary: Update a staff member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Staff"
+    delete:
+      operationId: deleteStaff
+      tags: [staff]
+      summary: Delete a staff member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Tables ────────────────────────────────────────────────────────────
+  /tables:
+    get:
+      operationId: listTables
+      tags: [tables]
+      summary: List all tables with current status
+      responses:
+        "200":
+          description: List of tables
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Table"
+    post:
+      operationId: createTable
+      tags: [tables]
+      summary: Create a new table
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TableInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Table"
+
+  /tables/{id}:
+    get:
+      operationId: getTable
+      tags: [tables]
+      summary: Get table by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Table
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Table"
+    patch:
+      operationId: updateTable
+      tags: [tables]
+      summary: Update a table
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TableUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Table"
+    delete:
+      operationId: deleteTable
+      tags: [tables]
+      summary: Delete a table
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Rooms ─────────────────────────────────────────────────────────────
+  /rooms:
+    get:
+      operationId: listRooms
+      tags: [rooms]
+      summary: List all rooms and halls
+      responses:
+        "200":
+          description: List of rooms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Room"
+    post:
+      operationId: createRoom
+      tags: [rooms]
+      summary: Create a new room or hall
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoomInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+
+  /rooms/{id}:
+    get:
+      operationId: getRoom
+      tags: [rooms]
+      summary: Get a room by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+    patch:
+      operationId: updateRoom
+      tags: [rooms]
+      summary: Update a room
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoomUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+    delete:
+      operationId: deleteRoom
+      tags: [rooms]
+      summary: Delete a room
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Menu Categories ───────────────────────────────────────────────────
+  /menu/categories:
+    get:
+      operationId: listCategories
+      tags: [menu]
+      summary: List all menu categories
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+    post:
+      operationId: createCategory
+      tags: [menu]
+      summary: Create a menu category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+
+  /menu/categories/{id}:
+    patch:
+      operationId: updateCategory
+      tags: [menu]
+      summary: Update a category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+    delete:
+      operationId: deleteCategory
+      tags: [menu]
+      summary: Delete a category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Menu Items ────────────────────────────────────────────────────────
+  /menu/items:
+    get:
+      operationId: listMenuItems
+      tags: [menu]
+      summary: List all menu items
+      responses:
+        "200":
+          description: Menu items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MenuItem"
+    post:
+      operationId: createMenuItem
+      tags: [menu]
+      summary: Create a menu item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MenuItemInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MenuItem"
+
+  /menu/items/{id}:
+    get:
+      operationId: getMenuItem
+      tags: [menu]
+      summary: Get a menu item by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Menu item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MenuItem"
+    patch:
+      operationId: updateMenuItem
+      tags: [menu]
+      summary: Update a menu item (price, availability, discount)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MenuItemUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MenuItem"
+    delete:
+      operationId: deleteMenuItem
+      tags: [menu]
+      summary: Delete a menu item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /menu/popular:
+    get:
+      operationId: getPopularItems
+      tags: [menu]
+      summary: Get most popular menu items by order count
+      responses:
+        "200":
+          description: Popular items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PopularItem"
+
+  # ── Bookings ──────────────────────────────────────────────────────────
+  /bookings:
+    get:
+      operationId: listBookings
+      tags: [bookings]
+      summary: List bookings (optionally filter by date or status)
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Bookings list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+    post:
+      operationId: createBooking
+      tags: [bookings]
+      summary: Create a new booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+
+  /bookings/{id}:
+    get:
+      operationId: getBooking
+      tags: [bookings]
+      summary: Get a booking by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Booking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+    patch:
+      operationId: updateBooking
+      tags: [bookings]
+      summary: Update a booking (status, notes)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+    delete:
+      operationId: deleteBooking
+      tags: [bookings]
+      summary: Delete a booking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Sessions (active table/room occupancy with live timer) ────────────
+  /sessions:
+    get:
+      operationId: listSessions
+      tags: [sessions]
+      summary: List all active sessions
+      responses:
+        "200":
+          description: Active sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Session"
+    post:
+      operationId: createSession
+      tags: [sessions]
+      summary: Start a new session (check-in)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/{id}:
+    get:
+      operationId: getSession
+      tags: [sessions]
+      summary: Get a session by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+    patch:
+      operationId: updateSession
+      tags: [sessions]
+      summary: Update session (extend time, change status)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/{id}/bill:
+    get:
+      operationId: getSessionBill
+      tags: [sessions]
+      summary: Get the live itemized bill for an active session (time booking + orders)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Live bill breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionBill"
+
+  /sessions/{id}/cancel:
+    post:
+      operationId: cancelSession
+      tags: [sessions]
+      summary: Cancel a session (table/room) without invoicing; logged for the cancellations report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+                  cancelledAmount:
+                    type: number
+
+  /sessions/{id}/remove-guest:
+    post:
+      operationId: removeGuest
+      tags: [sessions]
+      summary: Remove one guest from an active session; logged for the cancellations report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Updated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/{id}/end:
+    post:
+      operationId: endSession
+      tags: [sessions]
+      summary: End a session and generate invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                paymentMethod:
+                  type: string
+                  enum: [cash, card, mixed]
+                amountPaid:
+                  type: number
+                  minimum: 0
+                discountPercent:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+                notes:
+                  type: string
+                overrideTotal:
+                  type: number
+                  minimum: 0
+                  description: Cashier-set final amount; overrides the computed total (higher or lower)
+      responses:
+        "200":
+          description: Invoice generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+
+  /sessions/{id}/guests:
+    post:
+      operationId: addSessionGuest
+      tags: [sessions]
+      summary: Add a person to an active per-person session (their time starts now)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        "201":
+          description: Updated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/{id}/guests/{guestId}/leave:
+    post:
+      operationId: sessionGuestLeave
+      tags: [sessions]
+      summary: Mark a person as left; their billed time freezes at this moment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: guestId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/{id}/stop-time:
+    post:
+      operationId: stopSessionTime
+      tags: [sessions]
+      summary: Stop the time clock for a session (time cost freezes; orders still allowed)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/{id}/resume-time:
+    post:
+      operationId: resumeSessionTime
+      tags: [sessions]
+      summary: Resume the time clock; the paused gap is not charged
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  # ── Orders ────────────────────────────────────────────────────────────
+  /orders:
+    get:
+      operationId: listOrders
+      tags: [orders]
+      summary: List orders (optionally filter by session)
+      parameters:
+        - name: sessionId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Orders list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Create a new order (items added to active session)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Get order by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+    patch:
+      operationId: updateOrder
+      tags: [orders]
+      summary: Update order status (kitchen workflow)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+    delete:
+      operationId: deleteOrder
+      tags: [orders]
+      summary: Delete (remove) an order entirely, logging it for the cancellations report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /orders/{orderId}/items/{itemId}:
+    delete:
+      operationId: cancelOrderItem
+      tags: [orders]
+      summary: Cancel a single line item in an order; logged for the cancellations report
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Item cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+                  orderDeleted:
+                    type: boolean
+                  order:
+                    $ref: "#/components/schemas/Order"
+
+  # ── Customers ─────────────────────────────────────────────────────────
+  /customers:
+    get:
+      operationId: listCustomers
+      tags: [customers]
+      summary: List all regular customers
+      responses:
+        "200":
+          description: Customer list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Customer"
+    post:
+      operationId: createCustomer
+      tags: [customers]
+      summary: Create a new regular customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+
+  /customers/{id}:
+    get:
+      operationId: getCustomer
+      tags: [customers]
+      summary: Get customer by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+    patch:
+      operationId: updateCustomer
+      tags: [customers]
+      summary: Update customer info
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+    delete:
+      operationId: deleteCustomer
+      tags: [customers]
+      summary: Delete a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /customers/{id}/summary:
+    get:
+      operationId: getCustomerSummary
+      tags: [customers]
+      summary: Get customer payment summary (daily/weekly/monthly/yearly)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Customer summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerSummary"
+
+  # ── Invoices ──────────────────────────────────────────────────────────
+  /invoices:
+    get:
+      operationId: listInvoices
+      tags: [invoices]
+      summary: List all invoices
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Invoices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invoice"
+    post:
+      operationId: createInvoice
+      tags: [invoices]
+      summary: Create a manual/quick-sale invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+
+  /invoices/{id}:
+    get:
+      operationId: getInvoice
+      tags: [invoices]
+      summary: Get invoice by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+    patch:
+      operationId: updateInvoice
+      tags: [invoices]
+      summary: Update invoice (apply discount, change payment method)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+
+  # ── Expenses ──────────────────────────────────────────────────────────
+  /expenses:
+    get:
+      operationId: listExpenses
+      tags: [expenses]
+      summary: List all manager expenses
+      responses:
+        "200":
+          description: Expenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Expense"
+    post:
+      operationId: createExpense
+      tags: [expenses]
+      summary: Record a new expense (rent, bills, supplies, etc.)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+
+  /expenses/{id}:
+    patch:
+      operationId: updateExpense
+      tags: [expenses]
+      summary: Update an expense
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+    delete:
+      operationId: deleteExpense
+      tags: [expenses]
+      summary: Delete an expense
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Inventory ─────────────────────────────────────────────────────────
+  /inventory:
+    get:
+      operationId: listInventory
+      tags: [inventory]
+      summary: List all inventory items
+      responses:
+        "200":
+          description: Inventory items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InventoryItem"
+    post:
+      operationId: createInventoryItem
+      tags: [inventory]
+      summary: Add a new inventory item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InventoryItemInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryItem"
+
+  /inventory/{id}:
+    patch:
+      operationId: updateInventoryItem
+      tags: [inventory]
+      summary: Update inventory item (restock, adjust quantity)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InventoryItemUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryItem"
+    delete:
+      operationId: deleteInventoryItem
+      tags: [inventory]
+      summary: Delete inventory item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Reports ───────────────────────────────────────────────────────────
+  /reports/summary:
+    get:
+      operationId: getReportSummary
+      tags: [reports]
+      summary: Get revenue and expense summary by period
+      parameters:
+        - name: period
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [daily, weekly, monthly, yearly]
+        - name: date
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Report summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportSummary"
+
+  /reports/transactions:
+    get:
+      operationId: getTransactionsReport
+      tags: [reports]
+      summary: Full transactions log with line items and breakdowns for a period
+      parameters:
+        - name: period
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [daily, weekly, monthly, yearly]
+        - name: date
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Transactions report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionsReport"
+
+  /reports/staff-performance:
+    get:
+      operationId: getStaffPerformance
+      tags: [reports]
+      summary: Get top staff by sales
+      responses:
+        "200":
+          description: Staff performance
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StaffPerformance"
+
+  /reports/cancellations:
+    get:
+      operationId: getCancellationsReport
+      tags: [reports]
+      summary: Cancelled/deleted orders and cancelled tables/rooms (manager only)
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [daily, weekly, monthly, yearly]
+        - name: date
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Cancellations report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancellationsReport"
+        "403":
+          description: Manager access required
+
+  # ── Dashboard ─────────────────────────────────────────────────────────
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get live dashboard stats (occupancy, revenue, active sessions)
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    # ── Auth ────────────────────────────────────────────────────────────
+    LoginInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    AuthResult:
+      type: object
+      required: [staff, token]
+      properties:
+        staff:
+          $ref: "#/components/schemas/Staff"
+        token:
+          type: string
+
+    ChangePasswordInput:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 6
+
+    ForceChangePasswordInput:
+      type: object
+      required: [username, currentPassword, newPassword]
+      properties:
+        username:
+          type: string
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 6
+
+    VersionInfo:
+      type: object
+      required: [version]
+      properties:
+        version:
+          type: string
+
+    MessageResult:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        token:
+          type: string
+          description: Optional refreshed bearer token (e.g. after a password change re-issues the session).
+
+    # ── Admin ───────────────────────────────────────────────────────────
+    ResetDataInput:
+      type: object
+      required: [confirm, scopes]
+      properties:
+        confirm:
+          type: string
+          description: Must equal the literal string "RESET"
+        scopes:
+          $ref: "#/components/schemas/ResetDataScopes"
+
+    ResetDataScopes:
+      type: object
+      properties:
+        ordersSessions:
+          type: boolean
+        bookings:
+          type: boolean
+        invoices:
+          type: boolean
+        expenses:
+          type: boolean
+        customers:
+          type: boolean
+        inventory:
+          type: boolean
+
+    ResetDataResult:
+      type: object
+      required: [message, deleted]
+      properties:
+        message:
+          type: string
+        deleted:
+          type: object
+          additionalProperties:
+            type: integer
+
+    # ── Staff ───────────────────────────────────────────────────────────
+    Staff:
+      type: object
+      required: [id, name, username, role, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        username:
+          type: string
+        role:
+          type: string
+          enum: [admin, manager, cashier, waiter, kitchen]
+        isActive:
+          type: boolean
+        phone:
+          type: ["string", "null"]
+        permissions:
+          type: ["object", "null"]
+        createdAt:
+          type: string
+
+    StaffInput:
+      type: object
+      required: [name, username, password, role]
+      properties:
+        name:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [admin, manager, cashier, waiter, kitchen]
+        phone:
+          type: string
+        permissions:
+          type: object
+
+    StaffUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, manager, cashier, waiter, kitchen]
+        phone:
+          type: string
+        isActive:
+          type: boolean
+        permissions:
+          type: object
+        password:
+          type: string
+
+    # ── Tables ──────────────────────────────────────────────────────────
+    Table:
+      type: object
+      required: [id, number, capacity, status, type, posX, posY, hourlyRate]
+      properties:
+        id:
+          type: integer
+        number:
+          type: integer
+        capacity:
+          type: integer
+        status:
+          type: string
+          enum: [available, reserved, occupied]
+        type:
+          type: string
+          enum: [regular, football, work]
+        hourlyRate:
+          type: number
+          minimum: 0
+        posX:
+          type: integer
+        posY:
+          type: integer
+        qrCode:
+          type: ["string", "null"]
+        minOrderAmount:
+          type: ["number", "null"]
+
+    TableInput:
+      type: object
+      required: [number, capacity, type]
+      properties:
+        number:
+          type: integer
+        capacity:
+          type: integer
+        type:
+          type: string
+          enum: [regular, football, work]
+        hourlyRate:
+          type: number
+          minimum: 0
+        posX:
+          type: integer
+        posY:
+          type: integer
+        minOrderAmount:
+          type: number
+
+    TableUpdate:
+      type: object
+      properties:
+        number:
+          type: integer
+        capacity:
+          type: integer
+        status:
+          type: string
+          enum: [available, reserved, occupied]
+        type:
+          type: string
+          enum: [regular, football, work]
+        hourlyRate:
+          type: number
+          minimum: 0
+        posX:
+          type: integer
+        posY:
+          type: integer
+        minOrderAmount:
+          type: number
+
+    # ── Rooms ───────────────────────────────────────────────────────────
+    Room:
+      type: object
+      required: [id, name, capacity, type, status, hourlyRate]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        capacity:
+          type: integer
+        type:
+          type: string
+          enum: [meeting, lecture, training]
+        status:
+          type: string
+          enum: [available, reserved, occupied]
+        hourlyRate:
+          type: number
+          minimum: 0
+        hasProjector:
+          type: boolean
+        hasMicrophone:
+          type: boolean
+        hasWhiteboard:
+          type: boolean
+        qrCode:
+          type: ["string", "null"]
+
+    RoomInput:
+      type: object
+      required: [name, capacity, type, hourlyRate]
+      properties:
+        name:
+          type: string
+        capacity:
+          type: integer
+        type:
+          type: string
+          enum: [meeting, lecture, training]
+        hourlyRate:
+          type: number
+        hasProjector:
+          type: boolean
+        hasMicrophone:
+          type: boolean
+        hasWhiteboard:
+          type: boolean
+
+    RoomUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        capacity:
+          type: integer
+        type:
+          type: string
+          enum: [meeting, lecture, training]
+        status:
+          type: string
+          enum: [available, reserved, occupied]
+        hourlyRate:
+          type: number
+          minimum: 0
+        hasProjector:
+          type: boolean
+        hasMicrophone:
+          type: boolean
+        hasWhiteboard:
+          type: boolean
+
+    # ── Menu ────────────────────────────────────────────────────────────
+    Category:
+      type: object
+      required: [id, name, sortOrder]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        icon:
+          type: ["string", "null"]
+        sortOrder:
+          type: integer
+
+    CategoryInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        icon:
+          type: string
+        sortOrder:
+          type: integer
+
+    CategoryUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        icon:
+          type: string
+        sortOrder:
+          type: integer
+
+    MenuItem:
+      type: object
+      required: [id, name, price, categoryId, isAvailable]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        nameAr:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        price:
+          type: number
+        discountPercent:
+          type: ["number", "null"]
+        finalPrice:
+          type: number
+        categoryId:
+          type: integer
+        categoryName:
+          type: ["string", "null"]
+        isAvailable:
+          type: boolean
+        preparationTime:
+          type: ["integer", "null"]
+
+    MenuItemInput:
+      type: object
+      required: [name, price, categoryId]
+      properties:
+        name:
+          type: string
+        nameAr:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          minimum: 0
+        discountPercent:
+          type: number
+          minimum: 0
+          maximum: 100
+        categoryId:
+          type: integer
+        isAvailable:
+          type: boolean
+        preparationTime:
+          type: integer
+
+    MenuItemUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        nameAr:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          minimum: 0
+        discountPercent:
+          type: number
+          minimum: 0
+          maximum: 100
+        categoryId:
+          type: integer
+        isAvailable:
+          type: boolean
+        preparationTime:
+          type: integer
+
+    PopularItem:
+      type: object
+      required: [id, name, totalOrdered, revenue]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        totalOrdered:
+          type: integer
+        revenue:
+          type: number
+
+    # ── Bookings ────────────────────────────────────────────────────────
+    Booking:
+      type: object
+      required: [id, type, resourceId, resourceName, customerName, customerPhone, startTime, endTime, status, guestCount, totalAmount, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [table, room, football]
+        resourceId:
+          type: integer
+        resourceName:
+          type: string
+        customerName:
+          type: string
+        customerPhone:
+          type: ["string", "null"]
+        startTime:
+          type: string
+        endTime:
+          type: string
+        status:
+          type: string
+          enum: [pending, confirmed, active, completed, cancelled]
+        guestCount:
+          type: integer
+        totalAmount:
+          type: number
+        includesDrinks:
+          type: ["boolean", "null"]
+        needsProjector:
+          type: ["boolean", "null"]
+        needsMicrophone:
+          type: ["boolean", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    BookingInput:
+      type: object
+      required: [type, resourceId, customerName, startTime, endTime, guestCount]
+      properties:
+        type:
+          type: string
+          enum: [table, room, football]
+        resourceId:
+          type: integer
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        startTime:
+          type: string
+        endTime:
+          type: string
+        guestCount:
+          type: integer
+          minimum: 1
+        includesDrinks:
+          type: boolean
+        needsProjector:
+          type: boolean
+        needsMicrophone:
+          type: boolean
+        notes:
+          type: string
+
+    BookingUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, confirmed, active, completed, cancelled]
+        startTime:
+          type: string
+        endTime:
+          type: string
+        guestCount:
+          type: integer
+          minimum: 1
+        includesDrinks:
+          type: boolean
+        needsProjector:
+          type: boolean
+        needsMicrophone:
+          type: boolean
+        notes:
+          type: string
+
+    # ── Sessions ────────────────────────────────────────────────────────
+    Session:
+      type: object
+      required: [id, type, resourceId, resourceName, startTime, status, currentCost, staffId]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [table, room, football, work]
+        resourceId:
+          type: integer
+        resourceName:
+          type: string
+        bookingId:
+          type: ["integer", "null"]
+        customerId:
+          type: ["integer", "null"]
+        customerName:
+          type: ["string", "null"]
+        customerPhone:
+          type: ["string", "null"]
+        guestCount:
+          type: ["integer", "null"]
+        startTime:
+          type: string
+        endTime:
+          type: ["string", "null"]
+        plannedEndTime:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, extended, closed]
+        currentCost:
+          type: number
+        billingMode:
+          type: string
+          enum: [flat, per_person]
+        perPersonRate:
+          type: ["number", "null"]
+        timeStoppedAt:
+          type: ["string", "null"]
+        staffId:
+          type: integer
+        staffName:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+
+    SessionGuest:
+      type: object
+      required: [id, sessionId, joinedAt, billedHours, amount]
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: integer
+        name:
+          type: ["string", "null"]
+        joinedAt:
+          type: string
+        leftAt:
+          type: ["string", "null"]
+        billedHours:
+          type: number
+        amount:
+          type: number
+
+    SessionInput:
+      type: object
+      required: [type, resourceId, staffId]
+      properties:
+        type:
+          type: string
+          enum: [table, room, football, work]
+        resourceId:
+          type: integer
+        bookingId:
+          type: integer
+        customerId:
+          type: integer
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        guestCount:
+          type: integer
+          minimum: 1
+        plannedEndTime:
+          type: string
+        billingMode:
+          type: string
+          enum: [flat, per_person]
+        perPersonRate:
+          type: number
+          minimum: 0
+        guestNames:
+          type: array
+          items:
+            type: string
+        staffId:
+          type: integer
+        notes:
+          type: string
+
+    SessionBill:
+      type: object
+      required: [sessionId, resourceName, startTime, billingMode, items, timeCost, orderCost, total]
+      properties:
+        sessionId:
+          type: integer
+        resourceName:
+          type: string
+        guestCount:
+          type: ["integer", "null"]
+        startTime:
+          type: string
+        billingMode:
+          type: string
+          enum: [flat, per_person]
+        timeStoppedAt:
+          type: ["string", "null"]
+        guests:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionGuest"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceItem"
+        timeCost:
+          type: number
+        orderCost:
+          type: number
+        total:
+          type: number
+
+    SessionUpdate:
+      type: object
+      properties:
+        plannedEndTime:
+          type: string
+        status:
+          type: string
+          enum: [active, extended, closed]
+        guestCount:
+          type: integer
+          minimum: 1
+        notes:
+          type: string
+
+    # ── Orders ──────────────────────────────────────────────────────────
+    OrderItem:
+      type: object
+      required: [id, menuItemId, menuItemName, quantity, unitPrice, subtotal]
+      properties:
+        id:
+          type: integer
+        menuItemId:
+          type: integer
+        menuItemName:
+          type: string
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+        subtotal:
+          type: number
+        notes:
+          type: ["string", "null"]
+
+    Order:
+      type: object
+      required: [id, sessionId, status, totalAmount, createdAt, items]
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: integer
+        staffId:
+          type: ["integer", "null"]
+        staffName:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, preparing, ready, delivered, cancelled]
+        totalAmount:
+          type: number
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+
+    OrderItemInput:
+      type: object
+      required: [menuItemId, quantity]
+      properties:
+        menuItemId:
+          type: integer
+        quantity:
+          type: integer
+          minimum: 1
+        notes:
+          type: string
+
+    OrderInput:
+      type: object
+      required: [sessionId, items]
+      properties:
+        sessionId:
+          type: integer
+        staffId:
+          type: integer
+        notes:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItemInput"
+
+    OrderUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, preparing, ready, delivered, cancelled]
+        notes:
+          type: string
+        reason:
+          type: string
+
+    # ── Invoices ────────────────────────────────────────────────────────
+    InvoiceItem:
+      type: object
+      required: [description, quantity, unitPrice, subtotal]
+      properties:
+        description:
+          type: string
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+        subtotal:
+          type: number
+
+    Invoice:
+      type: object
+      required: [id, sessionId, subtotal, discountAmount, tax, total, paymentMethod, status, createdAt, items]
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: ["integer", "null"]
+        customerName:
+          type: ["string", "null"]
+        subtotal:
+          type: number
+        discountAmount:
+          type: number
+        discountPercent:
+          type: ["number", "null"]
+        tax:
+          type: number
+        total:
+          type: number
+        amountPaid:
+          type: ["number", "null"]
+        change:
+          type: ["number", "null"]
+        paymentMethod:
+          type: string
+          enum: [cash, card, mixed]
+        status:
+          type: string
+          enum: [open, paid, cancelled]
+        staffId:
+          type: ["integer", "null"]
+        staffName:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceItem"
+
+    InvoiceInput:
+      type: object
+      required: [paymentMethod, items]
+      properties:
+        sessionId:
+          type: integer
+        customerName:
+          type: string
+        discountPercent:
+          type: number
+          minimum: 0
+          maximum: 100
+        amountPaid:
+          type: number
+          minimum: 0
+        paymentMethod:
+          type: string
+          enum: [cash, card, mixed]
+        staffId:
+          type: integer
+        notes:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceItem"
+
+    InvoiceUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [open, paid, cancelled]
+        discountPercent:
+          type: number
+        amountPaid:
+          type: number
+        paymentMethod:
+          type: string
+          enum: [cash, card, mixed]
+        notes:
+          type: string
+
+    # ── Expenses ────────────────────────────────────────────────────────
+    Expense:
+      type: object
+      required: [id, title, amount, category, date, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        amount:
+          type: number
+        category:
+          type: string
+          enum: [rent, utilities, supplies, salary, maintenance, other]
+        date:
+          type: string
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ExpenseInput:
+      type: object
+      required: [title, amount, category, date]
+      properties:
+        title:
+          type: string
+        amount:
+          type: number
+          minimum: 0
+        category:
+          type: string
+          enum: [rent, utilities, supplies, salary, maintenance, other]
+        date:
+          type: string
+        notes:
+          type: string
+
+    ExpenseUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        amount:
+          type: number
+          minimum: 0
+        category:
+          type: string
+          enum: [rent, utilities, supplies, salary, maintenance, other]
+        date:
+          type: string
+        notes:
+          type: string
+
+    # ── Inventory ───────────────────────────────────────────────────────
+    InventoryItem:
+      type: object
+      required: [id, name, unit, currentQuantity, minQuantity, costPerUnit, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        unit:
+          type: string
+        currentQuantity:
+          type: number
+        minQuantity:
+          type: number
+        costPerUnit:
+          type: number
+        isLow:
+          type: boolean
+        lastRestocked:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    InventoryItemInput:
+      type: object
+      required: [name, unit, currentQuantity, minQuantity, costPerUnit]
+      properties:
+        name:
+          type: string
+        unit:
+          type: string
+        currentQuantity:
+          type: number
+          minimum: 0
+        minQuantity:
+          type: number
+          minimum: 0
+        costPerUnit:
+          type: number
+          minimum: 0
+
+    InventoryItemUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        unit:
+          type: string
+        currentQuantity:
+          type: number
+          minimum: 0
+        minQuantity:
+          type: number
+          minimum: 0
+        costPerUnit:
+          type: number
+          minimum: 0
+
+    # ── Customers ───────────────────────────────────────────────────────
+    Customer:
+      type: object
+      required: [id, name, totalVisits, totalSpent, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        nameAr:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        company:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        totalVisits:
+          type: integer
+        totalSpent:
+          type: number
+        createdAt:
+          type: string
+
+    CustomerInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        nameAr:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        company:
+          type: string
+        notes:
+          type: string
+
+    CustomerUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        nameAr:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        company:
+          type: string
+        notes:
+          type: string
+
+    CustomerSummary:
+      type: object
+      required: [customer, payments, visitCount, bookingCount]
+      properties:
+        customer:
+          $ref: "#/components/schemas/Customer"
+        payments:
+          type: object
+          required: [today, thisWeek, thisMonth, thisYear, allTime]
+          properties:
+            today:
+              type: number
+            thisWeek:
+              type: number
+            thisMonth:
+              type: number
+            thisYear:
+              type: number
+            allTime:
+              type: number
+        visitCount:
+          type: integer
+        bookingCount:
+          type: integer
+        invoices:
+          type: array
+          items:
+            $ref: "#/components/schemas/Invoice"
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Session"
+
+    # ── Reports ─────────────────────────────────────────────────────────
+    ReportSummary:
+      type: object
+      required: [period, totalRevenue, totalExpenses, netProfit, invoiceCount, guestCount, avgOrderValue, revenueByDay]
+      properties:
+        period:
+          type: string
+        totalRevenue:
+          type: number
+        totalExpenses:
+          type: number
+        netProfit:
+          type: number
+        invoiceCount:
+          type: integer
+        guestCount:
+          type: integer
+        avgOrderValue:
+          type: number
+        revenueByDay:
+          type: array
+          items:
+            type: object
+            required: [date, revenue, expenses]
+            properties:
+              date:
+                type: string
+              revenue:
+                type: number
+              expenses:
+                type: number
+
+    TransactionsReport:
+      type: object
+      required: [period, start, end, invoiceCount, totalRevenue, timeRevenue, productRevenue, adjustments, totalDiscounts, topItems, details]
+      properties:
+        period:
+          type: string
+        start:
+          type: string
+        end:
+          type: string
+        invoiceCount:
+          type: integer
+        totalRevenue:
+          type: number
+        timeRevenue:
+          type: number
+        productRevenue:
+          type: number
+        adjustments:
+          type: number
+        totalDiscounts:
+          type: number
+        topItems:
+          type: array
+          items:
+            type: object
+            required: [name, quantity, total]
+            properties:
+              name:
+                type: string
+              quantity:
+                type: number
+              total:
+                type: number
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionDetail"
+
+    TransactionDetail:
+      type: object
+      required: [id, createdAt, subtotal, total, items]
+      properties:
+        id:
+          type: integer
+        createdAt:
+          type: string
+        sessionId:
+          type: ["integer", "null"]
+        resourceName:
+          type: ["string", "null"]
+        sessionType:
+          type: ["string", "null"]
+        guestCount:
+          type: ["integer", "null"]
+        sessionStart:
+          type: ["string", "null"]
+        sessionEnd:
+          type: ["string", "null"]
+        customerName:
+          type: ["string", "null"]
+        staffName:
+          type: ["string", "null"]
+        paymentMethod:
+          type: ["string", "null"]
+        subtotal:
+          type: number
+        discountAmount:
+          type: ["number", "null"]
+        total:
+          type: number
+        amountPaid:
+          type: ["number", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceItem"
+
+    StaffPerformance:
+      type: object
+      required: [staffId, staffName, totalSales, orderCount]
+      properties:
+        staffId:
+          type: integer
+        staffName:
+          type: string
+        totalSales:
+          type: number
+        orderCount:
+          type: integer
+
+    # ── Dashboard ───────────────────────────────────────────────────────
+    DashboardStats:
+      type: object
+      required: [activeSessionsCount, availableTablesCount, occupiedTablesCount, reservedTablesCount, availableRoomsCount, occupiedRoomsCount, todayRevenue, todayExpenses, todayNetProfit, pendingOrdersCount, totalGuestsNow, upcomingBookingsCount]
+      properties:
+        activeSessionsCount:
+          type: integer
+        availableTablesCount:
+          type: integer
+        occupiedTablesCount:
+          type: integer
+        reservedTablesCount:
+          type: integer
+        availableRoomsCount:
+          type: integer
+        occupiedRoomsCount:
+          type: integer
+        todayRevenue:
+          type: number
+        todayExpenses:
+          type: number
+        todayNetProfit:
+          type: number
+        pendingOrdersCount:
+          type: integer
+        totalGuestsNow:
+          type: integer
+        upcomingBookingsCount:
+          type: integer
+
+    # ── Shared ──────────────────────────────────────────────────────────
+    OkResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+
+    # ── Cancellations report (manager only) ─────────────────────────────
+    CancellationTally:
+      type: object
+      required: [count, total]
+      properties:
+        count:
+          type: integer
+        total:
+          type: number
+
+    CancellationDetail:
+      type: object
+      required: [id, kind, action, label, amount, createdAt]
+      properties:
+        id:
+          type: integer
+        kind:
+          type: string
+          enum: [order, order_item, session, guest]
+        action:
+          type: string
+          enum: [cancelled, deleted, removed]
+        resourceType:
+          type: ["string", "null"]
+        label:
+          type: string
+        amount:
+          type: number
+        reason:
+          type: ["string", "null"]
+        staffName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    CancellationsReport:
+      type: object
+      required: [period, orders, items, tables, rooms, guests, grandTotal, details]
+      properties:
+        period:
+          type: string
+        orders:
+          $ref: "#/components/schemas/CancellationTally"
+        items:
+          $ref: "#/components/schemas/CancellationTally"
+        tables:
+          $ref: "#/components/schemas/CancellationTally"
+        rooms:
+          $ref: "#/components/schemas/CancellationTally"
+        guests:
+          $ref: "#/components/schemas/CancellationTally"
+        grandTotal:
+          type: number
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/CancellationDetail"
