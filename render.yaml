@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: laini-cafe1
+    env: node
+    buildCommand: "corepack enable && pnpm install && pnpm --filter @workspace/brewdesk build && pnpm --filter api-server build && mkdir -p artifacts/api-server/dist/public artifacts/api-server/public && cp -r artifacts/brewdesk/dist/public/* artifacts/api-server/dist/public/ && cp -r artifacts/brewdesk/dist/public/* artifacts/api-server/public/"
+    startCommand: "pnpm --filter api-server start"
+    envVars:
+      - key: PNPM_VERSION
+        value: "10.15.1"
+      - key: NODE_ENV
+        value: "production"
